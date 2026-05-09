@@ -1,7 +1,3 @@
-"""
-Bank-Grade Financial Risk Flagging System - FastAPI Backend
-"""
-
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,6 +9,7 @@ import json
 import warnings
 warnings.filterwarnings("ignore")
 
+#uvicorn backend:app --reload --port 8000
 # ML & Explainability
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
