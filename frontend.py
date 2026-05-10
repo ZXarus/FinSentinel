@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import pandas as pd
@@ -8,7 +7,6 @@ import matplotlib.patches as mpatches
 import io
 
 API_URL = "http://localhost:8000"
-#streamlit run frontend.py
 
 # ─────────────────────────────────────────────
 # Page Config
@@ -20,9 +18,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ─────────────────────────────────────────────
-# Custom CSS — Light Aesthetic Theme
-# ─────────────────────────────────────────────
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
@@ -250,6 +245,57 @@ st.markdown("""
     [data-testid="stDataFrame"] { background: #ffffff; border-radius: 10px; }
 
     hr { border-color: #e2e8f0; }
+
+    /* Selectbox visible box */
+    .stSelectbox [data-baseweb="select"] > div:first-child {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+    }
+    /* Text inside visible box */
+    .stSelectbox [data-baseweb="select"] span,
+    .stSelectbox [data-baseweb="select"] div {
+        color: #1e293b !important;
+        background: #ffffff !important;
+    }
+    /* Dropdown panel */
+    [data-baseweb="popover"],
+    [data-baseweb="menu"],
+    ul[data-baseweb="menu"] {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+    }
+    /* Each option */
+    [role="option"], li[role="option"] {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+    }
+    /* Hovered option */
+    [role="option"]:hover, li[role="option"]:hover {
+        background: #eff6ff !important;
+        color: #1e3a5f !important;
+    }
+    /* Selected option */
+    [aria-selected="true"][role="option"] {
+        background: #dbeafe !important;
+        color: #1e3a5f !important;
+        font-weight: 700 !important;
+    }
+    /* Dropdown arrow */
+    .stSelectbox svg { fill: #1e3a5f !important; }
+    /* Selectbox label */
+    .stSelectbox label { color: #1e3a5f !important; font-weight: 600 !important; }
+
+            /* Force all button text to white, including blue buttons */
+.stButton > button,
+.stButton > button * {
+    color: #fff !important;
+    fill: #fff !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -497,8 +543,8 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 st.markdown("""
 <div class="hero-header">
-    <h1>🏦 FinSentinel <span class="badge">ML + SHAP</span></h1>
-    <p>Bank-Grade Earnings Manipulation Detector — powered by Machine Learning & Explainable AI</p>
+    <h1><span style="color:#fff;">🏦 FinSentinel</span> <span class="badge">ML + SHAP</span></h1>
+    <p style="color:#fff;">Bank-Grade Earnings Manipulation Detector — powered by Machine Learning & Explainable AI</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -567,6 +613,11 @@ with tab1:
 # ══════════════════════════════
 # TAB 2 — CSV Upload
 # ══════════════════════════════
+
+# Store batch results in session state so drilldown works after rerun
+if "batch_results" not in st.session_state:
+    st.session_state.batch_results = None
+
 with tab2:
     st.markdown('<div class="section-title">📂 Batch Analysis via CSV Upload</div>', unsafe_allow_html=True)
 
@@ -614,6 +665,8 @@ with tab2:
                             data    = response.json()
                             summary = data["summary"]
                             results = data["results"]
+                            # Store in session state so drilldown works after selectbox rerun
+                            st.session_state.batch_results = results
 
                             st.success(f"✅ Analyzed **{summary['total_companies']}** companies")
 
@@ -649,14 +702,26 @@ with tab2:
                             )
 
                             st.markdown('<div class="section-title">🔍 Company Deep-Dive</div>', unsafe_allow_html=True)
-                            selected = st.selectbox("Select a company to inspect:",
-                                                    [r["company_name"] for r in results])
-                            show_result_panel(next(r for r in results if r["company_name"] == selected))
 
                         else:
                             st.error(f"API Error {response.status_code}: {response.text}")
                     except Exception as e:
                         st.error(f"Error: {e}")
+
+    # ── Drilldown — OUTSIDE button block, reads from session_state ──
+    if st.session_state.batch_results:
+        results = st.session_state.batch_results
+        st.markdown('<div class="section-title">🔍 Company Deep-Dive</div>', unsafe_allow_html=True)
+        company_names = [r["company_name"] for r in results]
+        selected = st.selectbox(
+            "Select a company to inspect:",
+            company_names,
+            key="drilldown_select"
+        )
+        # Find and show the selected company result
+        selected_result = next((r for r in results if r["company_name"] == selected), None)
+        if selected_result:
+            show_result_panel(selected_result)
 
 
 # ══════════════════════════════
